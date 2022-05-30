@@ -1,11 +1,19 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_image_editor_app/Models/text_info.dart';
 import 'package:flutter_image_editor_app/Views/edit_image.dart';
 import 'package:flutter_image_editor_app/Widgets/default_button.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:screenshot/screenshot.dart';
+
+import '../utils/util.dart';
 
 abstract class EditImageViewModel extends State<EditImage> {
   final TextEditingController textEditingController = TextEditingController();
   final TextEditingController creatorText = TextEditingController();
+  ScreenshotController screenshotController = ScreenshotController();
   List<TextInfo> info = [];
   int currentIndex = 0;
 
@@ -98,12 +106,12 @@ abstract class EditImageViewModel extends State<EditImage> {
   boldFontSize() {
     if (fontWeight == FontWeight.bold) {
       setState(() {
-        info[currentIndex].fontweight = fontWeight!;
+        info[currentIndex].fontweight = FontWeight.normal;
         fontWeight = FontWeight.normal;
       });
     } else {
       setState(() {
-        info[currentIndex].fontweight = fontWeight!;
+        info[currentIndex].fontweight = FontWeight.bold;
         fontWeight = FontWeight.bold;
       });
     }
@@ -155,5 +163,29 @@ abstract class EditImageViewModel extends State<EditImage> {
       'Deleted',
       style: TextStyle(fontSize: 16.0),
     )));
+  }
+
+  saveImage(Uint8List bytes) async {
+    final time = DateTime.now()
+        .toIso8601String()
+        .replaceAll('.', '-')
+        .replaceAll(':', '-');
+    final name = "screenshot_$time";
+
+    await requestPermission(Permission.storage);
+    await ImageGallerySaver.saveImage(bytes, name: name);
+  }
+
+  saveToGallery(BuildContext context) {
+    if (info.isNotEmpty) {
+      screenshotController
+          .capture()
+          .then((Uint8List? image) => {
+                saveImage(image!),
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Image saved to gallery')))
+              })
+          .catchError((error) => print(error.toString()));
+    }
   }
 }
